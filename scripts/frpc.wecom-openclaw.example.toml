@@ -1,0 +1,11 @@
+serverAddr = "your-frps-domain.example.com"
+serverPort = 7000
+auth.method = "token"
+auth.token = "replace-with-your-frp-token"
+
+[[proxies]]
+name = "openclaw-wecom-callback"
+type = "https"
+localIP = "127.0.0.1"
+localPort = 8787
+customDomains = ["wecom-callback.example.com"]
