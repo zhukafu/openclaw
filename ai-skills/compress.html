@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>视频压缩 - 阿里云工具</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f5f7fa; }
+    .container { max-width: 800px; margin: 0 auto; background: white; padding: 24px; border-radius: 8px; }
+    h1 { color: #2c3e50; }
+    .form-group { margin-bottom: 16px; }
+    label { display:block; margin-bottom:8px; font-weight:600; }
+    input[type=file], select { width:100%; padding:10px; }
+    button { background: linear-gradient(to right, #f39c12, #d35400); color:white; padding:12px 18px; border:none; border-radius:6px; cursor:pointer; font-weight:700; }
+    button:disabled { opacity:0.6; cursor:not-allowed; }
+    .result { margin-top:18px; padding:12px; background:#e8f5e9; border-radius:6px; display:none; }
+    .error { background:#ffeaea; }
+    .loading { display:inline-block; width:18px; height:18px; border:3px solid #f3f3f3; border-top:3px solid #3498db; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-right:8px; }
+    @keyframes spin { 0% { transform:rotate(0deg) } 100% { transform:rotate(360deg) } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 视频压缩</h1>
+    <p>从本机选择视频文件，上传到本机并使用本地 ffmpeg 执行压缩，压缩完成后会给出下载链接。</p>
+
+    <form id="compressForm">
+      <div class="form-group">
+        <label for="videoFile">选择视频文件:</label>
+        <input type="file" id="videoFile" accept="video/*" required>
+      </div>
+
+      <div class="form-group">
+        <label for="outputFileName">输出文件名 (可选，自动添加后缀):</label>
+        <input type="text" id="outputFileName" placeholder="例如: my-video-compressed" />
+      </div>
+
+      <div class="form-group">
+        <label for="quality">压缩质量:</label>
+        <select id="quality">
+          <option value="high">高质量（较小压缩，推荐 CRF=23）</option>
+          <option value="medium" selected>中等质量（推荐 CRF=28）</option>
+          <option value="low">低质量（更大压缩，推荐 CRF=32）</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="format">输出格式:</label>
+        <select id="format">
+          <option value="mp4" selected>MP4 (H.264 + AAC)</option>
+          <option value="webm">WEBM (VP9 + Opus)</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="display:flex; gap:10px; align-items:center;">
+        <button type="submit" id="compressBtn">🔧 开始压缩</button>
+        <button type="button" onclick="location.href='/simple-upload.html'" style="background:#3498db;">↩️ 返回主页面</button>
+        <button type="button" id="refreshListBtn" style="background:#2ecc71;">🔄 刷新已压缩视频列表</button>
+      </div>
+    </form>
+
+    <div id="progress" style="margin-top:12px;"></div>
+
+    <div id="result" class="result"></div>
+
+    <div style="margin-top:20px;">
+      <h3>📁 已压缩视频</h3>
+      <div id="compressedList">正在加载...</div>
+    </div> 
+  </div>
+
+  <script>
+    const compressForm = document.getElementById('compressForm');
+    const compressBtn = document.getElementById('compressBtn');
+    const resultDiv = document.getElementById('result');
+    const progressDiv = document.getElementById('progress');
+    const compressedListDiv = document.getElementById('compressedList');
+    const refreshListBtn = document.getElementById('refreshListBtn');
+
+    // 让进度/日志更易读
+    progressDiv.style.whiteSpace = 'pre-wrap';
+
+    function showResult(html, isSuccess=true) {
+      resultDiv.style.display = 'block';
+      resultDiv.className = 'result ' + (isSuccess ? '' : 'error');
+      resultDiv.innerHTML = html;
+    }
+
+    async function fetchCompressedList() {
+      try {
+        compressedListDiv.textContent = '加载中...';
+        const resp = await fetch('/api/compressed-list');
+        if (!resp.ok) throw new Error('获取列表失败');
+        const list = await resp.json();
+        if (!Array.isArray(list) || list.length === 0) {
+          compressedListDiv.innerHTML = '<div>暂无压缩文件</div>';
+          return;
+        }
+        const rows = list.map(item => {
+          const date = new Date(item.mtime).toLocaleString();
+          const size = item.size ? (item.size / (1024*1024)).toFixed(2) + ' MB' : '-';
+          const statusBadge = item.status === 'done' ? '<span style="color:#2ecc71;font-weight:700">已完成</span>' : (item.status === 'compressing' ? '<span style="color:#f39c12;font-weight:700">压缩中</span>' : '<span style="color:#e74c3c;font-weight:700">失败</span>');
+          const downloadBtn = item.status === 'done' ? `<a href="${item.url}" download="${item.name}" target="_blank"><button style="background:#3498db;">⬇️ 下载</button></a>` : `<button disabled style="opacity:0.6;">⬇️ 下载</button>`;
+          const openBtn = item.status === 'done' ? `<button onclick="window.open('${item.url}', '_blank')">↗️ 在新标签打开</button>` : `<button disabled style="opacity:0.6;">↗️ 打开</button>`;
+          return `<div style="padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+            <div style="flex:1;">
+              <div style="font-weight:600">${item.name} &nbsp; ${statusBadge}</div>
+              <div style="color:#666;font-size:13px">${item.originalName ? item.originalName + ' • ' : ''}${size} • ${date}</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              ${downloadBtn}
+              ${openBtn}
+            </div>
+          </div>`;
+        }).join('');
+        compressedListDiv.innerHTML = rows;
+      } catch (err) {
+        console.error(err);
+        compressedListDiv.innerHTML = '<div class="error">获取列表失败: ' + (err.message || err) + '</div>';
+      }
+    }
+
+    refreshListBtn.addEventListener('click', fetchCompressedList);
+
+    compressForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('videoFile');
+      if (!fileInput.files.length) return alert('请选择一个视频文件');
+
+      compressBtn.disabled = true;
+      const spinner = document.createElement('span'); spinner.className = 'loading';
+      compressBtn.prepend(spinner);
+
+      try {
+        const file = fileInput.files[0];
+        const quality = document.getElementById('quality').value;
+        const format = document.getElementById('format').value;
+        const outputFileName = document.getElementById('outputFileName').value.trim();
+
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+        formData.append('quality', quality);
+        formData.append('format', format);
+        if (outputFileName) formData.append('outputFileName', outputFileName);
+
+        progressDiv.textContent = '正在上传并压缩，请耐心等待（取决于文件大小和机器性能）...';
+
+        const resp = await fetch('/api/compress', {
+          method: 'POST',
+          body: formData
+        });
+
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json.error || JSON.stringify(json));
+
+        // 如果任务已完成（之前已存在），直接显示下载
+        if (json.status === 'done') {
+          const url = json.url;
+          const filename = json.filename || url.split('/').pop();
+          const html = `🔗 压缩完成：<br><a href="${url}" download="${filename}">下载压缩后的视频</a><br><br><button onclick="window.open('${url}', '_blank')">在新标签打开</button>`;
+          showResult(html, true);
+          fetchCompressedList();
+        } else if (json.status === 'compressing') {
+          const taskId = json.taskId || json.task || json.id || json.taskId;
+          showResult(`任务已创建: <strong>${taskId}</strong> （压缩中），连接实时进度...`);
+
+          // 使用 SSE 订阅实时事件
+          const es = new EventSource(`/api/compress/${taskId}/events`);
+          es.addEventListener('progress', (e) => {
+            try {
+              const d = JSON.parse(e.data);
+              progressDiv.textContent = `进度: ${d.percent}%`;
+            } catch (err) { console.error(err); }
+          });
+          es.addEventListener('log', (e) => {
+            try {
+              const d = JSON.parse(e.data);
+              // 显示最近日志（只展示最后一部分，避免过长）
+              progressDiv.textContent = (progressDiv.textContent || '') + '\n' + (d.text || '').slice(-400);
+            } catch (err) { console.error(err); }
+          });
+          es.addEventListener('done', (e) => {
+            try {
+              const d = JSON.parse(e.data);
+              es.close();
+              const url = d.url;
+              const filename = d.filename || url.split('/').pop();
+              const html = `🔗 压缩完成：<br><a href="${url}" download="${filename}">下载压缩后的视频</a><br><br><button onclick="window.open('${url}', '_blank')">在新标签打开</button>`;
+              showResult(html, true);
+              fetchCompressedList();
+            } catch (err) { console.error(err); }
+          });
+          es.addEventListener('failed', (e) => {
+            try {
+              const d = JSON.parse(e.data);
+              es.close();
+              showResult('压缩失败: ' + (d.error || d.stderr || '未知错误'), false);
+              fetchCompressedList();
+            } catch (err) { console.error(err); }
+          });
+          es.onerror = (err) => {
+            console.error('SSE 连接错误:', err);
+          };
+        } else {
+          showResult('任务创建响应: ' + JSON.stringify(json), true);
+          fetchCompressedList();
+        }
+      } catch (err) {
+        console.error(err);
+        showResult('压缩失败: ' + (err.message || err), false);
+      } finally {
+        compressBtn.disabled = false;
+        if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+        progressDiv.textContent = '';
+      }
+    });
+
+    // 自动填充输出文件名（去掉扩展名），仅当用户未手动输入时
+    const videoFileInput = document.getElementById('videoFile');
+    const outputFileNameInput = document.getElementById('outputFileName');
+    videoFileInput.addEventListener('change', function() {
+      if (!videoFileInput.files.length) return;
+      if (outputFileNameInput.value && outputFileNameInput.value.trim()) return; // 保持用户输入
+      const file = videoFileInput.files[0];
+      const base = file.name.replace(/\.[^/.]+$/, '');
+      outputFileNameInput.value = base;
+    });
+
+    // 页面加载时获取列表
+    window.addEventListener('load', fetchCompressedList);
+  </script>
+</body>
+</html>

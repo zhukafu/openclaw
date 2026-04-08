@@ -22,8 +22,12 @@ if (mode !== "lint" && mode !== "format") {
 
 const lintExts = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const formatExts = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".md", ".mdx"]);
+const ignoredPrefixes = ["ai-skills/uploads/"];
 
 const shouldSelect = (filePath) => {
+  if (ignoredPrefixes.some((prefix) => filePath.startsWith(prefix))) {
+    return false;
+  }
   const ext = path.extname(filePath).toLowerCase();
   if (mode === "lint") {
     return lintExts.has(ext);

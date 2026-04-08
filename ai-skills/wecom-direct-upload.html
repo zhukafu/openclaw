@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>企业微信直传文件</title>
+  <style>
+    :root {
+      --bg: linear-gradient(150deg, #eef6ff 0%, #f1fbf4 52%, #fff4ea 100%);
+      --card: rgba(255,255,255,.94);
+      --border: rgba(19,71,118,.12);
+      --text: #19324a;
+      --muted: #637788;
+      --primary: #1677ff;
+      --danger: #bf4456;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 18px 40px;
+    }
+    .hero, .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 18px 50px rgba(19,71,118,.1);
+      backdrop-filter: blur(12px);
+    }
+    .hero {
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+    }
+    .sub {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 760px;
+      font-size: 15px;
+    }
+    .actions, .row-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button, .jump {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+    }
+    button:hover, .jump:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(19,71,118,.16);
+    }
+    button:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .primary { color: #fff; background: linear-gradient(135deg, #1677ff, #0e61d9); }
+    .secondary { color: var(--text); background: #edf4fc; border: 1px solid rgba(22,119,255,.14); }
+    .danger { color: #fff; background: linear-gradient(135deg, #cf5264, #b43446); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .panel { padding: 22px; }
+    .panel h2 { margin: 0 0 14px; font-size: 22px; }
+    .field { margin-bottom: 15px; }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    input[type="text"], input[type="file"], select {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(19,71,118,.14);
+      background: rgba(255,255,255,.92);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: rgba(22,119,255,.45);
+      box-shadow: 0 0 0 4px rgba(22,119,255,.08);
+    }
+    .hint {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #eef6ff;
+      border: 1px solid rgba(22,119,255,.14);
+      line-height: 1.7;
+      display: none;
+      word-break: break-word;
+    }
+    .status.error {
+      background: #fff2f3;
+      border-color: rgba(191,68,86,.18);
+      color: var(--danger);
+    }
+    .status.success {
+      background: #eefaf4;
+      border-color: rgba(17,153,108,.18);
+    }
+    .meta {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .meta-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(245,249,253,.96);
+      border: 1px solid rgba(19,71,118,.08);
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+    .meta-item strong { display: inline-block; min-width: 92px; }
+    video {
+      width: 100%;
+      max-height: 460px;
+      border-radius: 18px;
+      background: #08131d;
+      box-shadow: 0 18px 44px rgba(8,19,29,.24);
+    }
+    .empty {
+      min-height: 240px;
+      border-radius: 18px;
+      border: 1px dashed rgba(19,71,118,.18);
+      background: rgba(247,250,253,.88);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      line-height: 1.8;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(22,119,255,.08);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+      .hero, .panel { border-radius: 20px; padding: 18px; }
+      .page { padding: 18px 14px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1>企业微信直传文件</h1>
+        <p class="sub">
+          本页不再让企业微信去拉取外部 URL，而是由当前服务把本地文件直接上传到企业微信。
+          对视频来说，上传成功后会返回 <code>media_id</code>，并直接生成本地代理播放链接。
+        </p>
+      </div>
+      <div class="actions">
+        <a class="jump secondary" href="/simple-upload.html">返回主工具</a>
+        <a class="jump secondary" href="/wecom-video.html">切到 URL 上传页</a>
+        <button class="danger" type="button" onclick="logout()">退出登录</button>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>直传到企微</h2>
+        <div class="hint">常见限制：视频通常比普通文件更严格。若大文件失败，往往是企业微信接口本身大小限制，不是外链问题。</div>
+        <form id="uploadForm">
+          <div class="field">
+            <label for="type">上传类型</label>
+            <select id="type">
+              <option value="video">video</option>
+              <option value="file">file</option>
+            </select>
+            <div class="hint">`video` 可直接进入播放器；`file` 更适合普通文件，但不一定可视频预览。</div>
+          </div>
+
+          <div class="field">
+            <label for="fileInput">选择本地文件</label>
+            <input id="fileInput" type="file" required>
+          </div>
+
+          <div class="field">
+            <label for="fileName">上传文件名（可选）</label>
+            <input id="fileName" type="text" placeholder="留空则使用原文件名">
+          </div>
+
+          <div class="row-actions">
+            <button id="uploadBtn" class="primary" type="submit">开始直传</button>
+            <button class="secondary" type="button" onclick="resetForm()">清空</button>
+          </div>
+        </form>
+
+        <div id="statusBox" class="status"></div>
+        <div id="uploadMeta" class="meta" style="display:none;"></div>
+      </section>
+
+      <section class="panel">
+        <h2>在线播放</h2>
+        <div class="hint">已有 <code>media_id</code> 也可以手动填入后直接预览。</div>
+
+        <div class="field">
+          <label for="mediaId">media_id</label>
+          <input id="mediaId" type="text" placeholder="上传成功后会自动回填">
+        </div>
+
+        <div class="row-actions">
+          <button class="primary" type="button" onclick="loadPlayer()">加载播放</button>
+          <button class="secondary" type="button" onclick="copyPlaybackUrl()">复制播放链接</button>
+        </div>
+
+        <div id="playMeta" class="meta" style="display:none;"></div>
+        <video id="player" controls playsinline preload="metadata" style="display:none;"></video>
+        <div id="emptyState" class="empty">
+          直传成功后，这里会自动开始加载视频。<br>
+          你也可以手动输入已有的 <code>media_id</code>。
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = '/login.html';
+    }
+
+    let currentPlaybackUrl = '';
+
+    function logout() {
+      localStorage.removeItem('isLoggedIn');
+      window.location.href = '/login.html';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(message, type = 'info') {
+      const el = document.getElementById('statusBox');
+      el.innerHTML = message;
+      el.className = `status ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`.trim();
+      el.style.display = 'block';
+    }
+
+    function showMeta(id, items) {
+      const el = document.getElementById(id);
+      el.style.display = 'grid';
+      el.innerHTML = items.map(item => `<div class="meta-item"><strong>${item.label}</strong>${item.value}</div>`).join('');
+    }
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `请求失败: ${response.status}`);
+      }
+      return data;
+    }
+
+    function setUploadLoading(loading) {
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = loading;
+      btn.textContent = loading ? '上传中...' : '开始直传';
+    }
+
+    async function buildPlaybackUrl(mediaId) {
+      const result = await fetchJson(`/api/wecom/direct-media-url/${encodeURIComponent(mediaId)}`);
+      return result.playbackUrl;
+    }
+
+    async function renderPlayer(mediaId) {
+      const url = await buildPlaybackUrl(mediaId);
+      currentPlaybackUrl = url;
+      const player = document.getElementById('player');
+      const empty = document.getElementById('emptyState');
+      player.src = url;
+      player.style.display = 'block';
+      empty.style.display = 'none';
+      showMeta('playMeta', [
+        { label: 'media_id', value: escapeHtml(mediaId) },
+        { label: '播放链接', value: `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a>` }
+      ]);
+    }
+
+    function loadPlayer() {
+      const mediaId = document.getElementById('mediaId').value.trim();
+      if (!mediaId) {
+        setStatus('请先输入或上传获得 media_id。', 'error');
+        return;
+      }
+      renderPlayer(mediaId)
+        .then(() => setStatus('已生成企业微信直链。', 'success'))
+        .catch((error) => setStatus(`生成企业微信直链失败：${escapeHtml(error.message)}`, 'error'));
+    }
+
+    async function copyPlaybackUrl() {
+      if (!currentPlaybackUrl) {
+        setStatus('当前还没有可复制的播放链接。', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(currentPlaybackUrl);
+        setStatus('播放链接已复制。', 'success');
+      } catch (error) {
+        setStatus(`复制失败，请手动复制：${escapeHtml(currentPlaybackUrl)}`, 'error');
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('uploadForm').reset();
+      document.getElementById('uploadMeta').style.display = 'none';
+      setStatus('已清空上传表单。');
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        setStatus('请选择一个文件。', 'error');
+        return;
+      }
+
+      setUploadLoading(true);
+      try {
+        const form = new FormData();
+        form.append('file', fileInput.files[0], document.getElementById('fileName').value.trim() || fileInput.files[0].name);
+        form.append('type', document.getElementById('type').value);
+        form.append('fileName', document.getElementById('fileName').value.trim());
+
+        setStatus('正在把本地文件直传到企业微信...');
+        const result = await fetchJson('/api/wecom/upload-direct', {
+          method: 'POST',
+          body: form
+        });
+
+        document.getElementById('mediaId').value = result.mediaId || '';
+        showMeta('uploadMeta', [
+          { label: '上传类型', value: escapeHtml(result.type || '-') },
+          { label: '文件名', value: escapeHtml(result.originalName || result.fileName || '-') },
+          { label: 'media_id', value: escapeHtml(result.mediaId || '-') },
+          { label: 'created_at', value: escapeHtml(result.createdAt || '-') }
+        ]);
+        setStatus('企业微信直传成功。', 'success');
+
+        if (result.type === 'video' && result.mediaId) {
+          await renderPlayer(result.mediaId);
+        }
+      } catch (error) {
+        setStatus(`直传失败：${escapeHtml(error.message)}`, 'error');
+      } finally {
+        setUploadLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="stylesheet" href="https://unpkg.com/xgplayer@3.0.23/dist/index.min.css">
+  <title>飞书文件上传与播放</title>
+  <style>
+    :root {
+      --bg: linear-gradient(145deg, #eef5ff 0%, #f3fbf6 45%, #fff5eb 100%);
+      --card: rgba(255, 255, 255, 0.94);
+      --border: rgba(17, 70, 120, 0.12);
+      --text: #19324a;
+      --muted: #627688;
+      --primary: #1677ff;
+      --accent: #0d9b6c;
+      --danger: #bf3f52;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 18px 40px;
+    }
+
+    .hero, .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 18px 50px rgba(17, 70, 120, 0.1);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+    }
+
+    .sub {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .actions, .row-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button, .jump {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+    }
+
+    button:hover, .jump:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(17, 70, 120, 0.16);
+    }
+
+    button:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .primary { color: #fff; background: linear-gradient(135deg, #1677ff, #0f5fd1); }
+    .secondary { color: var(--text); background: #edf4fc; border: 1px solid rgba(22,119,255,.14); }
+    .danger { color: #fff; background: linear-gradient(135deg, #cf5264, #b63649); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.02fr .98fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .panel { padding: 22px; }
+    .panel h2 { margin: 0 0 14px; font-size: 22px; }
+    .field { margin-bottom: 15px; }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(17, 70, 120, 0.14);
+      background: rgba(255,255,255,.92);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(22,119,255,.45);
+      box-shadow: 0 0 0 4px rgba(22,119,255,.08);
+    }
+
+    .hint {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      background: rgba(22,119,255,.12);
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #eef6ff;
+      border: 1px solid rgba(22,119,255,.14);
+      line-height: 1.7;
+      display: none;
+      word-break: break-word;
+    }
+
+    .status.error {
+      background: #fff2f3;
+      border-color: rgba(191,63,82,.18);
+      color: var(--danger);
+    }
+
+    .status.success {
+      background: #eefaf4;
+      border-color: rgba(13,155,108,.18);
+    }
+
+    .meta {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .meta-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(245,249,253,.96);
+      border: 1px solid rgba(17,70,120,.08);
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .meta-item strong { display: inline-block; min-width: 92px; }
+
+    #xgPlayer, video {
+      width: 100%;
+      max-height: 470px;
+      border-radius: 18px;
+      background: #08131d;
+      box-shadow: 0 18px 44px rgba(8, 19, 29, .24);
+    }
+
+    .empty {
+      min-height: 240px;
+      border-radius: 18px;
+      border: 1px dashed rgba(17,70,120,.18);
+      background: rgba(247,250,253,.88);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      line-height: 1.8;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(22,119,255,.08);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+      .hero, .panel { border-radius: 20px; padding: 18px; }
+      .page { padding: 18px 14px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1>飞书文件上传与播放</h1>
+        <p class="sub">
+          页面会把文件上传到飞书云盘，再优先通过飞书素材接口获取临时下载链接进行直连播放。
+          如果浏览器侧直连失败，再回退到后端代理播放。
+        </p>
+      </div>
+      <div class="actions">
+        <a class="jump secondary" href="/simple-upload.html">返回主工具</a>
+        <button class="danger" type="button" onclick="logout()">退出登录</button>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>上传到飞书素材</h2>
+        <div id="configBadge" class="badge">正在读取飞书配置</div>
+
+        <form id="uploadForm">
+          <div class="field">
+            <label for="parentNode">父节点说明</label>
+            <input id="parentNode" type="text" placeholder="留空则自动使用飞书云盘根目录">
+            <div class="hint">当前版本会自动创建一个飞书文档作为 media 上传点，这里仅做展示说明，不需要手填。</div>
+          </div>
+
+          <div class="field">
+            <label for="fileInput">选择文件</label>
+            <input id="fileInput" type="file" required>
+            <div class="hint">小文件会直接上传；大于 <code>20MB</code> 的文件会自动改走飞书分片上传。</div>
+          </div>
+
+          <div class="field">
+            <label for="customName">文件名（可选）</label>
+            <input id="customName" type="text" placeholder="留空则使用原文件名">
+          </div>
+
+          <div class="row-actions">
+            <button id="uploadBtn" class="primary" type="submit">上传并生成播放链接</button>
+            <button class="secondary" type="button" onclick="resetForm()">清空</button>
+          </div>
+        </form>
+
+        <div id="statusBox" class="status"></div>
+        <div id="uploadMeta" class="meta" style="display:none;"></div>
+      </section>
+
+      <section class="panel">
+        <h2>在线播放</h2>
+
+        <div class="field">
+          <label for="fileToken">file_token</label>
+          <input id="fileToken" type="text" placeholder="上传成功后自动回填，也可手动输入已有 file_token">
+        </div>
+
+        <div class="row-actions">
+          <button class="primary" type="button" onclick="loadPlayer()">加载播放</button>
+          <button class="secondary" type="button" onclick="loadTmpPlayer()">临时直链试播</button>
+          <button class="secondary" type="button" onclick="loadDirectPlayer()">原始接口试播</button>
+          <button class="secondary" type="button" onclick="copyPlaybackUrl()">复制当前播放链接</button>
+        </div>
+
+        <div id="playMeta" class="meta" style="display:none;"></div>
+        <div id="xgPlayer" style="display:none;"></div>
+        <video id="player" controls playsinline preload="metadata" style="display:none;"></video>
+        <div id="emptyState" class="empty">
+          上传成功后这里会自动开始加载。<br>
+          也可以直接输入已有的 <code>file_token</code> 手动播放。
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/xgplayer@3.0.23/dist/index.min.js"></script>
+  <script src="https://unpkg.com/xgplayer-mp4@3.0.23/dist/index.min.js"></script>
+  <script>
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = '/login.html';
+    }
+
+    let currentPlaybackUrl = '';
+    let currentDirectUrl = '';
+    let currentDirectToken = '';
+    let xgPlayerInstance = null;
+
+    function destroyXgPlayer() {
+      if (xgPlayerInstance && typeof xgPlayerInstance.destroy === 'function') {
+        xgPlayerInstance.destroy();
+      }
+      xgPlayerInstance = null;
+      document.getElementById('xgPlayer').innerHTML = '';
+      document.getElementById('xgPlayer').style.display = 'none';
+    }
+
+    function logout() {
+      localStorage.removeItem('isLoggedIn');
+      window.location.href = '/login.html';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(message, type = 'info') {
+      const el = document.getElementById('statusBox');
+      el.innerHTML = message;
+      el.className = `status ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`.trim();
+      el.style.display = 'block';
+    }
+
+    function showMeta(id, items) {
+      const el = document.getElementById(id);
+      el.style.display = 'grid';
+      el.innerHTML = items.map(item => `<div class="meta-item"><strong>${item.label}</strong>${item.value}</div>`).join('');
+    }
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `请求失败: ${response.status}`);
+      }
+      return data;
+    }
+
+    async function loadConfig() {
+      try {
+        const config = await fetchJson('/api/feishu/config');
+        document.getElementById('configBadge').textContent = `已配置 ${config.appIdMasked}`;
+        document.getElementById('parentNode').value = '自动创建 doc_file 上传点';
+      } catch (error) {
+        document.getElementById('configBadge').textContent = `配置读取失败: ${error.message}`;
+      }
+    }
+
+    function setUploadLoading(loading) {
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = loading;
+      btn.textContent = loading ? '上传中...' : '上传并生成播放链接';
+    }
+
+    function buildPlaybackUrl(fileToken) {
+      return `${window.location.origin}/api/feishu/files/${encodeURIComponent(fileToken)}/download`;
+    }
+
+    function renderPlayer(fileToken) {
+      destroyXgPlayer();
+      const playbackUrl = buildPlaybackUrl(fileToken);
+      currentPlaybackUrl = playbackUrl;
+      const player = document.getElementById('player');
+      const empty = document.getElementById('emptyState');
+      player.src = playbackUrl;
+      player.style.display = 'block';
+      empty.style.display = 'none';
+      showMeta('playMeta', [
+        { label: 'file_token', value: escapeHtml(fileToken) },
+        { label: '代理播放', value: `<a href="${escapeHtml(playbackUrl)}" target="_blank" rel="noreferrer">${escapeHtml(playbackUrl)}</a>` }
+      ]);
+    }
+
+    function renderTmpPlayer(fileToken, tmpDownloadUrl) {
+      destroyXgPlayer();
+      currentPlaybackUrl = tmpDownloadUrl;
+      const player = document.getElementById('player');
+      const empty = document.getElementById('emptyState');
+      player.src = tmpDownloadUrl;
+      player.style.display = 'block';
+      empty.style.display = 'none';
+      showMeta('playMeta', [
+        { label: 'file_token', value: escapeHtml(fileToken) },
+        { label: '临时直链', value: `<a href="${escapeHtml(tmpDownloadUrl)}" target="_blank" rel="noreferrer">${escapeHtml(tmpDownloadUrl)}</a>` },
+        { label: '代理播放', value: `<a href="${escapeHtml(buildPlaybackUrl(fileToken))}" target="_blank" rel="noreferrer">${escapeHtml(buildPlaybackUrl(fileToken))}</a>` }
+      ]);
+    }
+
+    function renderDirectPlayer(fileToken, directApiUrl, accessToken) {
+      const PlayerCtor = window.Player;
+      const mp4Plugin = window.Mp4Plugin?.default || window.Mp4Plugin || window.XgplayerMp4?.default || window.XgplayerMp4 || window.MP4Plugin?.default || window.MP4Plugin;
+      if (!PlayerCtor) {
+        throw new Error('xgplayer 主脚本未加载完成');
+      }
+      if (!mp4Plugin) {
+        throw new Error('xgplayer-mp4 依赖未加载完成');
+      }
+
+      currentDirectUrl = directApiUrl;
+      currentDirectToken = accessToken;
+      const player = document.getElementById('player');
+      const empty = document.getElementById('emptyState');
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+      player.style.display = 'none';
+
+      const xgPlayerEl = document.getElementById('xgPlayer');
+      xgPlayerEl.style.display = 'block';
+      empty.style.display = 'none';
+      destroyXgPlayer();
+      xgPlayerEl.style.display = 'block';
+
+      xgPlayerInstance = new PlayerCtor({
+        el: xgPlayerEl,
+        url: directApiUrl,
+        fluid: true,
+        autoplay: true,
+        playsinline: true,
+        videoInit: true,
+        lang: 'zh-cn',
+        plugins: [mp4Plugin],
+        mp4Plugin: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        },
+        mp4plugin: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
+      });
+
+      if (typeof xgPlayerInstance.on === 'function') {
+        xgPlayerInstance.on('error', () => {
+          setStatus('xgplayer 直连飞书原始接口失败，已回退到代理播放。大概率是 CORS 或飞书浏览器侧限制。', 'error');
+          renderPlayer(fileToken);
+        });
+      }
+
+      showMeta('playMeta', [
+        { label: 'file_token', value: escapeHtml(fileToken) },
+        { label: '原始接口', value: `<a href="${escapeHtml(directApiUrl)}" target="_blank" rel="noreferrer">${escapeHtml(directApiUrl)}</a>` },
+        { label: '代理播放', value: `<a href="${escapeHtml(buildPlaybackUrl(fileToken))}" target="_blank" rel="noreferrer">${escapeHtml(buildPlaybackUrl(fileToken))}</a>` }
+      ]);
+    }
+
+    async function loadPlayer() {
+      const fileToken = document.getElementById('fileToken').value.trim();
+      if (!fileToken) {
+        setStatus('请先输入或上传获得 file_token。', 'error');
+        return;
+      }
+      try {
+        const tmp = await fetchJson(`/api/feishu/tmp-download-url/${encodeURIComponent(fileToken)}`);
+        renderTmpPlayer(fileToken, tmp.tmpDownloadUrl);
+        setStatus('已优先生成飞书临时下载链接并开始直连播放。', 'success');
+      } catch (tmpError) {
+        renderPlayer(fileToken);
+        try {
+          const direct = await fetchJson(`/api/feishu/direct-file-url/${encodeURIComponent(fileToken)}`);
+          showMeta('playMeta', [
+            { label: 'file_token', value: escapeHtml(fileToken) },
+            { label: '原始接口', value: `<a href="${escapeHtml(direct.directApiUrl)}" target="_blank" rel="noreferrer">${escapeHtml(direct.directApiUrl)}</a>` },
+            { label: '代理播放', value: `<a href="${escapeHtml(currentPlaybackUrl)}" target="_blank" rel="noreferrer">${escapeHtml(currentPlaybackUrl)}</a>` }
+          ]);
+          setStatus('飞书临时下载链接获取失败，已回退到代理播放。', 'success');
+        } catch (error) {
+          setStatus('已生成飞书代理播放链接。原始下载接口信息读取失败。', 'success');
+        }
+        return;
+      }
+      try {
+        const direct = await fetchJson(`/api/feishu/direct-file-url/${encodeURIComponent(fileToken)}`);
+        showMeta('playMeta', [
+          { label: 'file_token', value: escapeHtml(fileToken) },
+          { label: '临时直链', value: `<a href="${escapeHtml(currentPlaybackUrl)}" target="_blank" rel="noreferrer">${escapeHtml(currentPlaybackUrl)}</a>` },
+          { label: '原始接口', value: `<a href="${escapeHtml(direct.directApiUrl)}" target="_blank" rel="noreferrer">${escapeHtml(direct.directApiUrl)}</a>` },
+          { label: '代理播放', value: `<a href="${escapeHtml(buildPlaybackUrl(fileToken))}" target="_blank" rel="noreferrer">${escapeHtml(buildPlaybackUrl(fileToken))}</a>` }
+        ]);
+        setStatus('已生成飞书临时下载链接并开始直连播放。', 'success');
+      } catch (error) {
+        setStatus('已生成飞书临时下载链接并开始直连播放。', 'success');
+      }
+    }
+
+    async function loadTmpPlayer() {
+      const fileToken = document.getElementById('fileToken').value.trim();
+      if (!fileToken) {
+        setStatus('请先输入或上传获得 file_token。', 'error');
+        return;
+      }
+      try {
+        const tmp = await fetchJson(`/api/feishu/tmp-download-url/${encodeURIComponent(fileToken)}`);
+        renderTmpPlayer(fileToken, tmp.tmpDownloadUrl);
+        setStatus('已使用飞书临时下载链接试播。', 'success');
+      } catch (error) {
+        setStatus(`飞书临时下载链接试播失败：${escapeHtml(error.message)}`, 'error');
+      }
+    }
+
+    async function loadDirectPlayer() {
+      const fileToken = document.getElementById('fileToken').value.trim();
+      if (!fileToken) {
+        setStatus('请先输入或上传获得 file_token。', 'error');
+        return;
+      }
+
+      try {
+        const direct = await fetchJson(`/api/feishu/direct-file-url/${encodeURIComponent(fileToken)}`);
+        renderDirectPlayer(fileToken, direct.directApiUrl, direct.accessToken);
+        setStatus('已使用 xgplayer 带 Bearer 头直连飞书原始接口试播。', 'success');
+      } catch (error) {
+        setStatus(`飞书原始接口试播失败：${escapeHtml(error.message)}`, 'error');
+      }
+    }
+
+    async function copyPlaybackUrl() {
+      if (!currentPlaybackUrl) {
+        setStatus('当前还没有可复制的播放链接。', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(currentPlaybackUrl);
+        setStatus('播放代理链接已复制。', 'success');
+      } catch (error) {
+        setStatus(`复制失败，请手动复制：${escapeHtml(currentPlaybackUrl)}`, 'error');
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('uploadForm').reset();
+      document.getElementById('uploadMeta').style.display = 'none';
+      setStatus('已清空上传表单。');
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        setStatus('请选择一个文件。', 'error');
+        return;
+      }
+
+      setUploadLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0], document.getElementById('customName').value.trim() || fileInput.files[0].name);
+        formData.append('fileName', document.getElementById('customName').value.trim());
+
+        setStatus('正在上传到飞书云盘...');
+        const result = await fetchJson('/api/feishu/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        document.getElementById('fileToken').value = result.fileToken || '';
+        showMeta('uploadMeta', [
+          { label: 'file_token', value: escapeHtml(result.fileToken || '-') },
+          { label: '文件名', value: escapeHtml(result.originalName || result.fileName || '-') },
+          { label: '上传方式', value: escapeHtml(result.uploadMode === 'multipart' ? '分片上传' : '直接上传') },
+          { label: 'parent_type', value: escapeHtml(result.parentType || '-') },
+          { label: 'parent_node', value: escapeHtml(result.parentNode || '-') },
+          { label: '临时直链查询', value: result.tmpDownloadLookupUrl ? `<a href="${escapeHtml(result.tmpDownloadLookupUrl)}" target="_blank" rel="noreferrer">${escapeHtml(result.tmpDownloadLookupUrl)}</a>` : '-' },
+          { label: '临时直链', value: result.tmpDownloadUrl ? `<a href="${escapeHtml(result.tmpDownloadUrl)}" target="_blank" rel="noreferrer">${escapeHtml(result.tmpDownloadUrl)}</a>` : '-' },
+          { label: '原始接口', value: result.directApiUrl ? `<a href="${escapeHtml(result.directApiUrl)}" target="_blank" rel="noreferrer">${escapeHtml(result.directApiUrl)}</a>` : '-' },
+          { label: '代理播放', value: `<a href="${escapeHtml(result.playbackUrl)}" target="_blank" rel="noreferrer">${escapeHtml(result.playbackUrl)}</a>` }
+        ]);
+        setStatus('飞书上传成功。页面会优先尝试飞书临时下载链接直连播放，失败时再回退代理。', 'success');
+        if (result.fileToken) {
+          await loadPlayer();
+        }
+      } catch (error) {
+        setStatus(`上传失败：${escapeHtml(error.message)}`, 'error');
+      } finally {
+        setUploadLoading(false);
+      }
+    });
+
+    loadConfig();
+  </script>
+</body>
+</html>

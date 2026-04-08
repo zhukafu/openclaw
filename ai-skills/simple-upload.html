@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>阿里云制品仓库上传工具</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 32px;
+    }
+
+    .header-row h1 {
+      margin: 0;
+      text-align: left;
+    }
+
+    .btn-logout {
+      background: linear-gradient(to right, #e74c3c, #c0392b);
+    }
+
+    .btn-logout:hover {
+      background: linear-gradient(to right, #c0392b, #a93226);
+    }
+    
+    .two-column {
+      display: flex;
+      gap: 30px;
+      margin-top: 20px;
+    }
+    
+    .section {
+      flex: 1;
+      padding: 25px;
+      border: 1px solid #eaeaea;
+      border-radius: 8px;
+      background-color: #fafafa;
+      min-width: 0; /* Prevent flex items from overflowing */
+    }
+    
+    .section-title {
+      font-size: 22px;
+      color: #3498db;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+      font-size: 16px;
+    }
+    
+    input[type="text"],
+    input[type="file"],
+    input[type="number"] {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+    }
+    
+    button {
+      background: linear-gradient(to right, #3498db, #2980b9);
+      color: white;
+      padding: 14px 25px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: linear-gradient(to right, #2980b9, #2573a7);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .btn-compress {
+      background: linear-gradient(to right, #f39c12, #d35400);
+      color: white;
+      padding: 10px 18px;
+      border-radius: 6px;
+      margin-right: 8px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-compress:hover {
+      background: linear-gradient(to right, #d35400, #c0392b);
+    }
+
+    .btn-get-link {
+      background: linear-gradient(to right, #2ecc71, #27ae60);
+    }
+    
+    .btn-get-link:hover {
+      background: linear-gradient(to right, #27ae60, #219653);
+    }
+    
+    .btn-clear {
+      background: linear-gradient(to right, #95a5a6, #7f8c8d);
+    }
+    
+    .btn-clear:hover {
+      background: linear-gradient(to right, #7f8c8d, #6c7b7f);
+    }
+    
+    .result {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 6px;
+      background-color: #e8f5e9;
+      border-left: 5px solid #4CAF50;
+      display: none;
+      overflow-x: auto;
+    }
+    
+    .error {
+      background-color: #ffeaea;
+      border-left-color: #f44336;
+    }
+    
+    .success {
+      background-color: #e8f5e9;
+      border-left-color: #4CAF50;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .file-info {
+      margin-top: 10px;
+      padding: 12px;
+      background-color: #f0f8ff;
+      border-radius: 4px;
+      font-size: 15px;
+      display: none;
+      border-left: 4px solid #87ceeb;
+    }
+    
+    .api-info {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+    
+    .api-info h3 {
+      margin-top: 0;
+      color: #856404;
+      font-size: 20px;
+    }
+    
+    .upload-details {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    
+    .detail-item {
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .detail-label {
+      font-weight: bold;
+      color: #495057;
+    }
+    
+    .detail-value {
+      color: #6c757d;
+      word-break: break-all;
+    }
+    
+    .download-url {
+      background-color: #e9f7ef;
+      border: 1px solid #2ecc71;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      word-break: break-all;
+      font-family: monospace;
+    }
+    
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    @media (max-width: 900px) {
+      .two-column {
+        flex-direction: column;
+      }
+      
+      .container {
+        margin: 10px;
+      }
+    }
+  </style>
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-row">
+      <h1>📦 阿里云制品仓库工具</h1>
+      <div>
+        <button type="button" class="btn-get-link" onclick="location.href='/wecom-direct-upload.html'">📤 企微直传</button>
+        <button type="button" class="btn-get-link" onclick="location.href='/feishu-video.html'">🪽 飞书文件</button>
+        <button type="button" class="btn-get-link" onclick="location.href='/dingtalk-video.html'">📁 钉钉文件</button>
+        <button type="button" class="btn-get-link" onclick="location.href='/wecom-video.html'">🎞️ 企微视频</button>
+        <button type="button" class="btn-get-link" onclick="location.href='/local-playlist-video.html'">📼 本地播放列表</button>
+        <button type="button" class="btn-compress" onclick="location.href='/compress.html'">🎬 压缩视频</button>
+        <button type="button" class="btn-logout" onclick="logout()">🚪 退出登录</button>
+      </div>
+    </div>
+    
+    <div class="api-info">
+      <h3>ℹ️ 服务信息</h3>
+      <p><strong>仓库地址:</strong> flow_generic_repo</p>
+      <p><strong>认证用户:</strong> 63b05082da874cca7225a283</p>
+    </div>
+    
+    <div class="two-column">
+    <!-- 文件上传区域 -->
+    <div class="section">
+      <h2 class="section-title">📤 上传文件</h2>
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="uploadFilePath">📁 文件路径:</label>
+          <input type="text" id="uploadFilePath" placeholder="输入远程存储路径，如: projects/myapp/assets" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="uploadVersion">🏷️ 版本号:</label>
+          <input type="text" id="uploadVersion" placeholder="输入版本号，如: 1.0.0" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="uploadFile">📄 选择文件:</label>
+          <input type="file" id="uploadFile" required>
+        </div>
+        
+        <div id="fileInfo" class="file-info"></div>
+        
+        <div class="form-group">
+          <label for="uploadFileName">📝 文件名 (可选):</label>
+          <input type="text" id="uploadFileName" placeholder="留空则使用原始文件名">
+        </div>
+        
+        <div class="form-group">
+          <label for="uploadDescription">💬 描述 (可选):</label>
+          <input type="text" id="uploadDescription" placeholder="输入文件描述">
+        </div>
+        
+        <div class="action-buttons">
+          <button type="submit">🚀 开始上传</button>
+          <button type="button" class="btn-clear" onclick="clearForm('uploadForm')">🔄 清空表单</button>
+        </div>
+      </form>
+      
+      <div id="uploadResult" class="result"></div>
+    </div>
+    
+    <!-- 获取下载链接区域 -->
+    <div class="section">
+      <h2 class="section-title">🔗 获取免密下载链接</h2>
+      <p style="color: #e74c3c; font-size: 14px; margin-top: -10px; margin-bottom: 15px;">⚠️ 注意: 文件必须已存在于阿里云仓库中才能获取下载链接</p>
+      <form id="linkForm">
+        <div class="form-group">
+          <label for="linkFilePath">📄 文件完整路径 (包含文件名):</label>
+          <input type="text" id="linkFilePath" placeholder="输入文件的完整路径(包含文件名)，如: projects/myapp/assets/filename.zip" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="linkVersion">🏷️ 版本号:</label>
+          <input type="text" id="linkVersion" placeholder="输入文件版本号，如: 1.0.0" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="linkExpiration">⏰ 链接有效期 (天):</label>
+          <input type="number" id="linkExpiration" value="7" min="1" max="365" required>
+        </div>
+        
+        <div class="action-buttons">
+          <button type="submit" class="btn-get-link">🔗 获取下载链接</button>
+          <button type="button" class="btn-clear" onclick="clearForm('linkForm')">🔄 清空表单</button>
+        </div>
+      </form>
+      
+      <div id="linkResult" class="result"></div>
+    </div>
+  </div>
+  </div>
+
+  <script>
+    // 检查登录状态
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      // 如果没有登录，重定向到登录页面
+      window.location.href = '/login.html';
+    }
+
+    function logout() {
+      localStorage.removeItem('isLoggedIn');
+      window.location.href = '/login.html';
+    }
+    
+    // 配置信息 - 使用后端代理
+    const CONFIG = {
+      baseUrl: window.location.origin, // 使用当前域名作为代理
+      api: {
+        upload: '/api/upload',
+        download: '/api/download',
+        getDownloadLink: '/api/get-download-link'
+      }
+    };
+
+    // 显示结果
+    function showResult(elementId, message, isSuccess = true) {
+      const resultDiv = document.getElementById(elementId);
+      resultDiv.innerHTML = message;
+      resultDiv.className = 'result ' + (isSuccess ? 'success' : 'error');
+      resultDiv.style.display = 'block';
+    }
+
+    // 显示加载状态
+    function showLoading(button, show) {
+      if (show) {
+        button.innerHTML = '<span class="loading"></span>处理中...';
+        button.disabled = true;
+      } else {
+        button.innerHTML = button.getAttribute('data-original-text') || button.textContent;
+        button.disabled = false;
+      }
+    }
+    
+    // 清空表单
+    function clearForm(formId) {
+      document.getElementById(formId).reset();
+      // 隐藏结果区域
+      const resultDiv = document.getElementById(formId.replace('Form', 'Result'));
+      if (resultDiv) {
+        resultDiv.classList.add('hidden');
+        resultDiv.style.display = 'none';
+      }
+      // 隐藏文件信息
+      const fileInfoDiv = document.getElementById('fileInfo');
+      if (fileInfoDiv) {
+        fileInfoDiv.style.display = 'none';
+      }
+    }
+
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 上传文件
+    async function uploadFile(formData) {
+      const { filePath, version, fileName, description, file } = formData;
+      
+      // 创建FormData
+      const uploadData = new FormData();
+      uploadData.append('file', file, fileName || file.name);
+      uploadData.append('filePath', filePath);
+      uploadData.append('version', version);
+      if (fileName) {
+        uploadData.append('fileName', fileName);
+      }
+      if (description) {
+        uploadData.append('description', description);
+      }
+
+      // 通过后端代理上传
+      const response = await fetch(CONFIG.api.upload, {
+        method: 'POST',
+        body: uploadData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP错误! 状态码: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    // 获取下载链接
+    async function getDownloadLink(filePath, version, expirationDays) {
+      // 构建查询参数
+      const params = new URLSearchParams({
+        filePath,
+        version,
+        expirationDays
+      });
+
+      // 通过后端代理获取下载链接
+      const response = await fetch(`${CONFIG.api.getDownloadLink}?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP错误! 状态码: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    // 上传文件表单提交事件
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitButton = e.submitter;
+      const originalText = submitButton.textContent;
+      submitButton.setAttribute('data-original-text', originalText);
+      
+      try {
+        showLoading(submitButton, true);
+        
+        // 获取表单数据
+        const filePath = document.getElementById('uploadFilePath').value.trim();
+        const version = document.getElementById('uploadVersion').value.trim();
+        const fileName = document.getElementById('uploadFileName').value.trim() || null;
+        const description = document.getElementById('uploadDescription').value.trim() || null;
+        const fileInput = document.getElementById('uploadFile');
+        
+        if (!fileInput.files.length) {
+          throw new Error('请选择一个文件');
+        }
+        
+        const file = fileInput.files[0];
+        
+        // 上传文件
+        const result = await uploadFile({
+          filePath,
+          version,
+          fileName,
+          description,
+          file
+        });
+        
+        // 显示成功结果
+        const successHtml = `
+          <h3>🎉 上传成功!</h3>
+          <div class="upload-details">
+            <div class="detail-item">
+              <span class="detail-label">文件MD5:</span>
+              <span class="detail-value">${result.object.fileMd5}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">文件SHA1:</span>
+              <span class="detail-value">${result.object.fileSha1}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">文件SHA256:</span>
+              <span class="detail-value">${result.object.fileSha256}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">文件大小:</span>
+              <span class="detail-value">${result.object.fileSize} 字节</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">临时免密下载地址:</span>
+            </div>
+            <div class="download-url">
+              ${result.object.url}
+            </div>
+          </div>
+          <div class="action-buttons">
+            <button onclick="copyToClipboard('${result.object.url}')">📋 复制链接</button>
+            <button onclick="openInNewTab('${result.object.url}')">↗️ 在新标签页打开</button>
+          </div>
+        `;
+        
+        showResult('uploadResult', successHtml, true);
+      } catch (error) {
+        console.error('上传失败:', error);
+        showResult('uploadResult', `上传失败: ${error.message}`, false);
+      } finally {
+        showLoading(submitButton, false);
+      }
+    });
+
+    // 获取下载链接表单提交事件
+    document.getElementById('linkForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitButton = e.submitter;
+      const originalText = submitButton.textContent;
+      submitButton.setAttribute('data-original-text', originalText);
+      
+      try {
+        showLoading(submitButton, true);
+        
+        // 获取表单数据
+        const filePath = document.getElementById('linkFilePath').value.trim();
+        const version = document.getElementById('linkVersion').value.trim();
+        const expirationDays = parseInt(document.getElementById('linkExpiration').value) || 7;
+        
+        // 获取下载链接
+        const result = await getDownloadLink(filePath, version, expirationDays);
+        
+        // 显示结果
+        const linkHtml = `
+          <h3>🔗 获取成功!</h3>
+          <div class="upload-details">
+            <div class="detail-item">
+              <span class="detail-label">免密下载链接:</span>
+            </div>
+            <div class="download-url">
+              ${result.downloadUrl}
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">SHA1校验:</span>
+              <span class="detail-value">${result.sha1}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">SHA256校验:</span>
+              <span class="detail-value">${result.sha256}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">MD5校验:</span>
+              <span class="detail-value">${result.md5}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">版本描述:</span>
+              <span class="detail-value">${result.versionDescription || '无'}</span>
+            </div>
+          </div>
+          <div class="action-buttons">
+            <button onclick="copyToClipboard('${result.downloadUrl}')">📋 复制链接</button>
+            <button onclick="openInNewTab('${result.downloadUrl}')">↗️ 在新标签页打开</button>
+          </div>
+        `;
+        
+        showResult('linkResult', linkHtml, true);
+      } catch (error) {
+        console.error('获取下载链接失败:', error);
+        showResult('linkResult', `获取下载链接失败: ${error.message}`, false);
+      } finally {
+        showLoading(submitButton, false);
+      }
+    });
+
+    // 复制到剪贴板函数
+    async function copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('链接已复制到剪贴板!');
+      } catch (err) {
+        console.error('复制失败:', err);
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('链接已复制到剪贴板!');
+      }
+    }
+    
+    // 在新标签页打开链接
+    function openInNewTab(url) {
+      window.open(url, '_blank');
+    }
+    
+    // 文件选择事件监听器
+    document.getElementById('uploadFile').addEventListener('change', function(e) {
+      const fileInfoDiv = document.getElementById('fileInfo');
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        
+        // 自动填充文件名（如果没有手动输入）
+        if (!document.getElementById('uploadFileName').value) {
+          document.getElementById('uploadFileName').value = file.name;
+        }
+        
+        // 显示文件信息
+        fileInfoDiv.textContent = `文件名: ${file.name}\n大小: ${formatFileSize(file.size)}\n类型: ${file.type || '未知'}`;
+        fileInfoDiv.style.display = 'block';
+      } else {
+        fileInfoDiv.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

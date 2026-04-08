@@ -1,0 +1,39 @@
+{
+  "name": "aliyun-package-tool",
+  "version": "1.0.0",
+  "description": "A Node.js tool for uploading files and getting temporary download links from Aliyun Package Repository",
+  "keywords": [
+    "aliyun",
+    "api",
+    "download",
+    "package",
+    "upload"
+  ],
+  "license": "MIT",
+  "author": "Aliyun Package Tool",
+  "main": "index.js",
+  "scripts": {
+    "download": "node download.js",
+    "frontend": "node server.js",
+    "generate-favicon": "node scripts/generate-favicon.js",
+    "get-download-link": "node getDownloadLink.js",
+    "proxy": "node proxy-server.js",
+    "serve": "node server.js",
+    "start": "node proxy-server.js",
+    "stop": "pkill -f proxy-server.js || echo 'Server not running'",
+    "upload": "node upload.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "basic-auth": "^2.0.1",
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "form-data": "^4.0.0",
+    "multer": "^1.4.5-lts.1",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "png-to-ico": "^1.0.0",
+    "sharp": "^0.32.0"
+  }
+}

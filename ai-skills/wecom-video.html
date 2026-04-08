@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>企业微信视频素材播放器</title>
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #f6efe8 0%, #dae7f3 55%, #edf7ef 100%);
+      --panel: rgba(255, 255, 255, 0.92);
+      --border: rgba(25, 64, 108, 0.12);
+      --text: #17324d;
+      --muted: #5f738a;
+      --accent: #0b6bcb;
+      --accent-2: #1a9150;
+      --warn: #cc7a00;
+      --danger: #b23a48;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(34, 68, 120, 0.12);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 760px;
+      line-height: 1.7;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    .link-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    button:hover,
+    .link-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(17, 68, 129, 0.16);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(135deg, #0b6bcb, #0d86d9);
+    }
+
+    .secondary {
+      color: var(--text);
+      background: #edf4fb;
+      border: 1px solid rgba(11, 107, 203, 0.14);
+    }
+
+    .danger {
+      color: #fff;
+      background: linear-gradient(135deg, #cb4d63, #b23a48);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 22px;
+      margin-top: 22px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 18px 48px rgba(34, 68, 120, 0.1);
+      backdrop-filter: blur(14px);
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    .tips {
+      margin: 14px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input[type="text"],
+    input[type="url"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(21, 65, 111, 0.14);
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(11, 107, 203, 0.45);
+      box-shadow: 0 0 0 4px rgba(11, 107, 203, 0.08);
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status {
+      margin-top: 16px;
+      border-radius: 18px;
+      padding: 16px;
+      line-height: 1.7;
+      background: #eef6ff;
+      border: 1px solid rgba(11, 107, 203, 0.12);
+      display: none;
+      word-break: break-word;
+    }
+
+    .status.error {
+      background: #fff1f2;
+      border-color: rgba(178, 58, 72, 0.18);
+      color: var(--danger);
+    }
+
+    .status.success {
+      background: #eefbf3;
+      border-color: rgba(26, 145, 80, 0.18);
+    }
+
+    .meta {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .meta-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(244, 248, 252, 0.92);
+      border: 1px solid rgba(21, 65, 111, 0.08);
+      font-size: 13px;
+    }
+
+    .meta-item strong {
+      display: inline-block;
+      min-width: 90px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(11, 107, 203, 0.12);
+      color: var(--accent);
+    }
+
+    .pill.warn {
+      background: rgba(204, 122, 0, 0.14);
+      color: var(--warn);
+    }
+
+    .pill.ok {
+      background: rgba(26, 145, 80, 0.14);
+      color: var(--accent-2);
+    }
+
+    .viewer {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    video {
+      width: 100%;
+      max-height: 460px;
+      border-radius: 20px;
+      background: #0b1220;
+      box-shadow: 0 20px 44px rgba(5, 20, 38, 0.24);
+    }
+
+    .empty {
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      border: 1px dashed rgba(21, 65, 111, 0.18);
+      background: rgba(246, 250, 253, 0.76);
+      color: var(--muted);
+      text-align: center;
+      padding: 18px;
+      line-height: 1.8;
+    }
+
+    .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(11, 107, 203, 0.08);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 940px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .shell {
+        padding: 18px 14px 28px;
+      }
+
+      .hero,
+      .card {
+        border-radius: 20px;
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>企业微信视频素材在线播放</h1>
+          <p class="subtitle">
+            输入一个可公网访问、支持分块下载的 MP4 地址，页面会发起企业微信异步上传任务，轮询拿到 <code>media_id</code>，
+            再生成企业微信直链，方便你直接预览和调试。
+          </p>
+        </div>
+        <div class="button-row">
+          <a class="link-btn secondary" href="/simple-upload.html">返回主工具</a>
+          <button class="danger" type="button" onclick="logout()">退出登录</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>异步上传</h2>
+        <div id="configBadge" class="pill">正在读取配置</div>
+        <ul class="tips">
+          <li>源地址必须是公网可访问的 <code>http/https</code> 视频 URL。</li>
+          <li>企业微信这条接口要求视频源支持 Range 分块下载，通常建议使用 CDN 或对象存储外链。</li>
+          <li>如果不填 MD5，页面会让服务端先把源视频下载一遍并自动计算。</li>
+          <li>企微返回的是 <code>media_id</code>；页面会基于它生成企业微信 <code>media/get</code> 直链。</li>
+        </ul>
+
+        <form id="uploadForm">
+          <div class="field">
+            <label for="sourceUrl">视频源地址</label>
+            <input id="sourceUrl" name="sourceUrl" type="url" placeholder="https://example.com/demo.mp4" required>
+            <div class="hint">建议直接填可下载的 MP4 外链。</div>
+          </div>
+
+          <div class="field">
+            <label for="filename">上传文件名</label>
+            <input id="filename" name="filename" type="text" placeholder="demo.mp4">
+            <div class="hint">不填时会从 URL 自动提取；最终会强制使用 <code>.mp4</code> 后缀。</div>
+          </div>
+
+          <div class="field">
+            <label for="md5">MD5（可选）</label>
+            <input id="md5" name="md5" type="text" placeholder="留空则自动计算">
+            <div class="hint">自动计算会稍慢，但能减少手工准备参数。</div>
+          </div>
+
+          <div class="inline-actions">
+            <button id="submitBtn" class="primary" type="submit">发起异步上传</button>
+            <button class="secondary" type="button" onclick="clearUploadForm()">清空表单</button>
+          </div>
+        </form>
+
+        <div id="statusBox" class="status"></div>
+        <div id="taskMeta" class="meta" style="display:none;"></div>
+      </section>
+
+      <section class="card viewer">
+        <div>
+          <h2>在线播放</h2>
+        <div class="hint">你也可以直接填已有的 <code>media_id</code> 生成企业微信直链。</div>
+        </div>
+
+        <div class="field">
+          <label for="existingMediaId">已有 media_id</label>
+          <input id="existingMediaId" type="text" placeholder="例如：3uFJzYQpAA...">
+        </div>
+
+        <div class="inline-actions">
+          <button class="secondary" type="button" onclick="loadExistingMedia()">加载播放</button>
+          <button class="secondary" type="button" onclick="copyPlaybackUrl()">复制播放链接</button>
+        </div>
+
+        <div id="playbackMeta" class="meta" style="display:none;"></div>
+        <video id="player" controls playsinline preload="metadata" style="display:none;"></video>
+        <div id="emptyState" class="empty">
+          上传成功后这里会自动开始播放。<br>
+          如果你已经有 <code>media_id</code>，也可以直接在上面加载。
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = '/login.html';
+    }
+
+    let pollTimer = null;
+    let currentPlaybackUrl = '';
+
+    function logout() {
+      localStorage.removeItem('isLoggedIn');
+      window.location.href = '/login.html';
+    }
+
+    function setStatus(message, type = 'info') {
+      const box = document.getElementById('statusBox');
+      box.className = `status ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`.trim();
+      box.innerHTML = message;
+      box.style.display = 'block';
+    }
+
+    function setLoading(loading) {
+      const button = document.getElementById('submitBtn');
+      button.disabled = loading;
+      button.textContent = loading ? '处理中...' : '发起异步上传';
+    }
+
+    function showTaskMeta(items) {
+      const panel = document.getElementById('taskMeta');
+      panel.style.display = 'grid';
+      panel.innerHTML = items.map(item => `
+        <div class="meta-item"><strong>${item.label}</strong>${item.value}</div>
+      `).join('');
+    }
+
+    function showPlaybackMeta(items) {
+      const panel = document.getElementById('playbackMeta');
+      panel.style.display = 'grid';
+      panel.innerHTML = items.map(item => `
+        <div class="meta-item"><strong>${item.label}</strong>${item.value}</div>
+      `).join('');
+    }
+
+    function clearUploadForm() {
+      document.getElementById('uploadForm').reset();
+      document.getElementById('taskMeta').style.display = 'none';
+      setStatus('已清空，重新填写源地址后可以再次发起任务。');
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderPlayback(mediaId, playbackUrl) {
+      const player = document.getElementById('player');
+      const empty = document.getElementById('emptyState');
+      currentPlaybackUrl = playbackUrl;
+      player.src = playbackUrl;
+      player.style.display = 'block';
+      empty.style.display = 'none';
+
+      showPlaybackMeta([
+        { label: 'media_id', value: escapeHtml(mediaId) },
+        { label: '播放链接', value: `<a href="${escapeHtml(playbackUrl)}" target="_blank" rel="noreferrer">${escapeHtml(playbackUrl)}</a>` }
+      ]);
+    }
+
+    async function fetchJson(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `请求失败: ${response.status}`);
+      }
+      return data;
+    }
+
+    async function loadConfig() {
+      try {
+        const config = await fetchJson('/api/wecom/config');
+        const badge = document.getElementById('configBadge');
+        if (config.configured) {
+          badge.textContent = `已配置企业微信 ${config.corpIdMasked}`;
+          badge.className = 'pill ok';
+        } else {
+          badge.textContent = '未配置企业微信参数';
+          badge.className = 'pill warn';
+        }
+      } catch (error) {
+        const badge = document.getElementById('configBadge');
+        badge.textContent = `配置读取失败: ${error.message}`;
+        badge.className = 'pill warn';
+      }
+    }
+
+    async function pollJob(jobid) {
+      try {
+        const result = await fetchJson(`/api/wecom/upload-by-url/${encodeURIComponent(jobid)}`);
+        const statusText = result.status === 'done' ? '已完成' : result.status === 'failed' ? '失败' : '处理中';
+        const statusClass = result.status === 'done' ? 'ok' : result.status === 'failed' ? 'warn' : '';
+
+        setStatus(`
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="pill ${statusClass}">任务状态: ${statusText}</span>
+            <span>jobid: <code>${escapeHtml(jobid)}</code></span>
+          </div>
+          <div style="margin-top:10px;">企业微信返回: ${escapeHtml(result.detailErrmsg || 'ok')}</div>
+        `, result.status === 'failed' ? 'error' : result.status === 'done' ? 'success' : 'info');
+
+        showTaskMeta([
+          { label: 'jobid', value: escapeHtml(jobid) },
+          { label: '状态', value: escapeHtml(statusText) },
+          { label: 'detail.errcode', value: escapeHtml(result.detailErrcode) },
+          { label: 'detail.errmsg', value: escapeHtml(result.detailErrmsg || 'ok') },
+          { label: 'media_id', value: escapeHtml(result.mediaId || '-') }
+        ]);
+
+        if (result.status === 'done' && result.mediaId && result.playbackUrl) {
+          stopPolling();
+          document.getElementById('existingMediaId').value = result.mediaId;
+          renderPlayback(result.mediaId, result.playbackUrl);
+        }
+
+        if (result.status === 'failed') {
+          stopPolling();
+        }
+      } catch (error) {
+        stopPolling();
+        setStatus(`轮询任务失败：${escapeHtml(error.message)}`, 'error');
+      }
+    }
+
+    async function loadExistingMedia() {
+      const mediaId = document.getElementById('existingMediaId').value.trim();
+      if (!mediaId) {
+        setStatus('请先输入 media_id。', 'error');
+        return;
+      }
+
+      try {
+        const result = await fetchJson(`/api/wecom/direct-media-url/${encodeURIComponent(mediaId)}`);
+        setStatus(`已生成企业微信直链，可直接在线播放。`, 'success');
+        renderPlayback(mediaId, result.playbackUrl);
+      } catch (error) {
+        setStatus(`生成企业微信直链失败：${escapeHtml(error.message)}`, 'error');
+      }
+    }
+
+    async function copyPlaybackUrl() {
+      if (!currentPlaybackUrl) {
+        setStatus('当前还没有可复制的播放链接。', 'error');
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(currentPlaybackUrl);
+        setStatus('播放链接已复制到剪贴板。', 'success');
+      } catch (error) {
+        setStatus(`复制失败，请手动复制：${escapeHtml(currentPlaybackUrl)}`, 'error');
+      }
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      stopPolling();
+      setLoading(true);
+
+      try {
+        const payload = {
+          url: document.getElementById('sourceUrl').value.trim(),
+          filename: document.getElementById('filename').value.trim(),
+          md5: document.getElementById('md5').value.trim()
+        };
+
+        setStatus('正在创建企业微信异步上传任务。如果没有填写 MD5，这一步会先下载源视频并计算摘要，请稍等。');
+        const result = await fetchJson('/api/wecom/upload-by-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        showTaskMeta([
+          { label: 'jobid', value: escapeHtml(result.jobid) },
+          { label: '文件名', value: escapeHtml(result.filename) },
+          { label: 'MD5', value: escapeHtml(result.md5) },
+          { label: '源地址', value: `<a href="${escapeHtml(result.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(result.sourceUrl)}</a>` }
+        ]);
+
+        setStatus(`任务已创建，开始轮询结果。jobid：<code>${escapeHtml(result.jobid)}</code>`);
+        await pollJob(result.jobid);
+        pollTimer = setInterval(() => pollJob(result.jobid), 3000);
+      } catch (error) {
+        setStatus(`发起任务失败：${escapeHtml(error.message)}`, 'error');
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    loadConfig();
+  </script>
+</body>
+</html>

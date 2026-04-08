@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="stylesheet" href="https://unpkg.com/xgplayer@3.0.23/dist/index.min.css">
+  <title>本地视频切分与播放列表</title>
+  <style>
+    :root {
+      --bg: linear-gradient(145deg, #eef6ff 0%, #f6f3ff 40%, #fff7ee 100%);
+      --card: rgba(255, 255, 255, 0.94);
+      --border: rgba(30, 71, 122, 0.14);
+      --text: #183049;
+      --muted: #667b90;
+      --primary: #156de8;
+      --accent: #0f9d70;
+      --danger: #be4558;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 18px 40px;
+    }
+
+    .hero, .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(24, 48, 73, 0.12);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.1;
+    }
+
+    .sub {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.75;
+      font-size: 15px;
+    }
+
+    .actions, .row-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button, .jump {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+    }
+
+    button:hover, .jump:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(24, 48, 73, 0.14);
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .primary { color: #fff; background: linear-gradient(135deg, #156de8, #0f59c4); }
+    .secondary { color: var(--text); background: #edf4fc; border: 1px solid rgba(21, 109, 232, .14); }
+    .danger { color: #fff; background: linear-gradient(135deg, #d35667, #b23849); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 430px minmax(0, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+      align-items: start;
+    }
+
+    .panel { padding: 22px; }
+    .panel h2 { margin: 0 0 14px; font-size: 22px; }
+    .field { margin-bottom: 15px; }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input[type="text"], input[type="number"], input[type="file"], textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(24, 48, 73, 0.14);
+      background: rgba(255,255,255,.92);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    input:focus, textarea:focus {
+      border-color: rgba(21,109,232,.45);
+      box-shadow: 0 0 0 4px rgba(21,109,232,.08);
+    }
+
+    .hint {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: #eef6ff;
+      border: 1px solid rgba(21,109,232,.12);
+      line-height: 1.7;
+      display: none;
+      word-break: break-word;
+    }
+
+    .status.error {
+      background: #fff2f3;
+      border-color: rgba(190,69,88,.18);
+      color: var(--danger);
+    }
+
+    .status.success {
+      background: #eefaf4;
+      border-color: rgba(15,157,112,.18);
+    }
+
+    .playlist-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .playlist-card {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(24, 48, 73, 0.1);
+      background: rgba(247, 250, 253, 0.92);
+      cursor: pointer;
+      transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+    }
+
+    .playlist-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(21,109,232,.22);
+      box-shadow: 0 14px 28px rgba(24, 48, 73, .08);
+    }
+
+    .playlist-card.active {
+      border-color: rgba(21,109,232,.35);
+      background: rgba(235, 244, 255, 0.96);
+    }
+
+    .playlist-card strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .playlist-card .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .player-shell {
+      display: grid;
+      gap: 18px;
+    }
+
+    video {
+      width: 100%;
+      max-height: 520px;
+      border-radius: 18px;
+      background: #09131d;
+      box-shadow: 0 20px 46px rgba(9, 19, 29, 0.26);
+    }
+
+    .empty {
+      min-height: 320px;
+      border-radius: 20px;
+      border: 1px dashed rgba(24,48,73,.18);
+      background: rgba(247,250,253,.88);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 18px;
+      line-height: 1.8;
+    }
+
+    .playlist-items {
+      display: grid;
+      gap: 10px;
+    }
+
+    .playlist-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(247,250,253,.96);
+      border: 1px solid rgba(24,48,73,.08);
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease;
+    }
+
+    .playlist-item.active {
+      background: rgba(232, 246, 239, 0.98);
+      border-color: rgba(15,157,112,.24);
+    }
+
+    .playlist-item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .playlist-item .url {
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .toolbar label {
+      margin: 0;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .hero, .panel { border-radius: 20px; padding: 18px; }
+      .page { padding: 18px 14px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1>本地视频切分与播放列表</h1>
+        <p class="sub">
+          这页完全走本地方案：可以把项目根目录下的 <code>demo.mp4</code> 用 <code>ffmpeg</code> 切成多段，也可以一次上传多个视频文件。
+          后端会生成一个本地播放列表，前端按顺序自动播放下一段，不再依赖企业微信、飞书或钉钉。
+        </p>
+      </div>
+      <div class="actions">
+        <a class="jump secondary" href="/simple-upload.html">返回主工具</a>
+        <button class="danger" type="button" onclick="logout()">退出登录</button>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>生成播放列表</h2>
+
+        <div class="field">
+          <label for="segmentSeconds">切分 demo.mp4 的片段时长（秒）</label>
+          <input id="segmentSeconds" type="number" min="5" step="1" value="30">
+          <div class="hint">点击下方按钮会直接切分项目根目录的 <code>demo.mp4</code>，输出到 <code>uploads/local-playlists</code>。</div>
+        </div>
+
+        <div class="row-actions">
+          <button id="splitDemoBtn" class="primary" type="button">切分 demo.mp4</button>
+          <button id="refreshBtn" class="secondary" type="button">刷新播放列表</button>
+        </div>
+
+        <div id="statusBox" class="status"></div>
+
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid rgba(24,48,73,.08);">
+
+        <form id="uploadForm">
+          <div class="field">
+            <label for="playlistName">批量上传后的播放列表名称</label>
+            <input id="playlistName" type="text" placeholder="例如：福满人间合集">
+          </div>
+
+          <div class="field">
+            <label for="videoFiles">选择多个视频文件</label>
+            <input id="videoFiles" type="file" accept="video/*,.mp4,.mov,.webm,.m4v,.ogg,.ogv" multiple required>
+            <div class="hint">上传后会按文件选择顺序生成播放列表，每个视频一项。</div>
+          </div>
+
+          <div class="row-actions">
+            <button class="primary" type="submit">批量上传并生成列表</button>
+          </div>
+        </form>
+
+        <div class="hint" style="margin-top: 18px;">已有播放列表</div>
+        <div id="playlistList" class="playlist-list">
+          <div class="empty" style="min-height: 180px;">正在读取本地播放列表…</div>
+        </div>
+
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid rgba(24,48,73,.08);">
+
+        <h2 style="margin-top:0;">上传到企业微信</h2>
+        <div class="field">
+          <label for="wecomLimit">上传当前本地列表的前 N 段</label>
+          <input id="wecomLimit" type="number" min="1" step="1" value="8">
+          <div class="hint">默认先传前 8 段，避免一口气把 100 多段全传上去。确认可用后再逐步放大。</div>
+        </div>
+
+        <div class="field">
+          <label for="wecomPlaylistName">企业微信播放列表名称</label>
+          <input id="wecomPlaylistName" type="text" placeholder="留空则自动使用当前本地列表名称">
+        </div>
+
+        <div class="row-actions">
+          <button id="uploadWecomBtn" class="primary" type="button">把当前列表上传到企微</button>
+          <button id="loadWecomBtn" class="secondary" type="button">读取企微播放列表</button>
+        </div>
+
+        <div class="hint" style="margin-top: 18px;">已有企业微信播放列表</div>
+        <div id="wecomPlaylistList" class="playlist-list">
+          <div class="empty" style="min-height: 160px;">正在读取企业微信播放列表…</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>顺序播放</h2>
+
+        <div id="playerShell" class="player-shell">
+          <div id="emptyPlayer" class="empty">还没有选中播放列表。<br>左侧可以先切分 <code>demo.mp4</code>，或者批量上传一组视频。</div>
+
+          <div id="playerBlock" style="display:none;">
+            <div id="xgPlayer" style="display:none;"></div>
+            <video id="videoPlayer" controls playsinline preload="metadata"></video>
+
+            <div class="toolbar">
+              <button id="prevBtn" class="secondary" type="button">上一段</button>
+              <button id="nextBtn" class="secondary" type="button">下一段</button>
+              <button id="copyJsonBtn" class="secondary" type="button">复制播放列表 JSON</button>
+              <label><input id="autoplayNext" type="checkbox" checked> 自动播放下一段</label>
+            </div>
+
+            <div id="playlistMeta" class="status success" style="display:block;"></div>
+            <div id="playlistItems" class="playlist-items"></div>
+
+            <div class="field" style="margin-top: 8px;">
+              <label for="playlistJson">播放列表 JSON</label>
+              <textarea id="playlistJson" readonly placeholder="生成后会显示当前播放列表 JSON"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/xgplayer@3.0.23/dist/index.min.js"></script>
+  <script src="https://unpkg.com/xgplayer-hls@3.0.23/dist/index.min.js"></script>
+  <script>
+    const statusBox = document.getElementById('statusBox');
+    const playlistListEl = document.getElementById('playlistList');
+    const splitDemoBtn = document.getElementById('splitDemoBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const uploadWecomBtn = document.getElementById('uploadWecomBtn');
+    const loadWecomBtn = document.getElementById('loadWecomBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const xgPlayerEl = document.getElementById('xgPlayer');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const emptyPlayer = document.getElementById('emptyPlayer');
+    const playerBlock = document.getElementById('playerBlock');
+    const playlistMeta = document.getElementById('playlistMeta');
+    const playlistItemsEl = document.getElementById('playlistItems');
+    const playlistJsonEl = document.getElementById('playlistJson');
+    const autoplayNextEl = document.getElementById('autoplayNext');
+    const wecomPlaylistListEl = document.getElementById('wecomPlaylistList');
+
+    let playlists = [];
+    let wecomPlaylists = [];
+    let currentPlaylist = null;
+    let currentIndex = 0;
+    let playerMode = 'segment';
+    let xgPlayerInstance = null;
+
+    function destroyXgPlayer() {
+      if (xgPlayerInstance && typeof xgPlayerInstance.destroy === 'function') {
+        xgPlayerInstance.destroy();
+      }
+      xgPlayerInstance = null;
+      xgPlayerEl.innerHTML = '';
+      xgPlayerEl.style.display = 'none';
+    }
+
+    function showNativeVideo() {
+      destroyXgPlayer();
+      videoPlayer.style.display = 'block';
+    }
+
+    function createXgHlsPlayer(url) {
+      const PlayerCtor = window.Player;
+      const HlsPlugin = window.HlsPlayer;
+      if (!PlayerCtor) {
+        throw new Error('xgplayer 主脚本未加载完成');
+      }
+
+      videoPlayer.pause();
+      videoPlayer.removeAttribute('src');
+      videoPlayer.load();
+      videoPlayer.style.display = 'none';
+      xgPlayerEl.style.display = 'block';
+      xgPlayerEl.innerHTML = '';
+
+      const canPlayNativeHls = !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
+      const config = {
+        el: xgPlayerEl,
+        url,
+        width: '100%',
+        height: 'auto',
+        autoplay: true,
+        fluid: true,
+        playsinline: true,
+        videoInit: true,
+        pip: true,
+        keyShortcut: 'on',
+        lang: 'zh-cn'
+      };
+
+      if (!canPlayNativeHls) {
+        if (!HlsPlugin || typeof HlsPlugin.isSupported !== 'function' || !HlsPlugin.isSupported()) {
+          throw new Error('xgplayer-hls 插件未加载完成或当前浏览器不支持该插件');
+        }
+        config.plugins = [HlsPlugin];
+        config.hls = {
+          retryCount: 2,
+          retryDelay: 1000,
+          loadTimeout: 10000,
+          fetchOptions: {
+            mode: 'cors'
+          }
+        };
+      }
+
+      xgPlayerInstance = new PlayerCtor(config);
+    }
+
+    function getCurrentPlaylistM3u8Url() {
+      if (!currentPlaylist || currentPlaylist.kind !== 'wecom') return '';
+      return `${location.origin}/api/wecom-playlists/${encodeURIComponent(currentPlaylist.id)}/index.m3u8`;
+    }
+
+    function normalizePlayableUrl(url) {
+      return String(url || '').startsWith('http') ? String(url || '') : `${location.origin}${String(url || '')}`;
+    }
+
+    function updatePlaylistMetaText() {
+      if (!currentPlaylist) return;
+      const kindLabel = currentPlaylist.kind === 'split'
+        ? 'demo 切分'
+        : currentPlaylist.kind === 'wecom'
+          ? `企业微信列表 | ${playerMode === 'm3u8' ? 'm3u8 播放' : '顺序片段播放'}`
+          : '批量上传';
+      playlistMeta.textContent = `${currentPlaylist.name} | ${kindLabel} | 共 ${currentPlaylist.items.length} 段 | 创建于 ${formatDate(currentPlaylist.createdAt)}`;
+    }
+
+    function logout() {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('loginTime');
+      window.location.href = '/login.html';
+    }
+
+    function showStatus(message, type = '') {
+      statusBox.className = `status ${type}`.trim();
+      statusBox.style.display = 'block';
+      statusBox.textContent = message;
+    }
+
+    function clearStatus() {
+      statusBox.style.display = 'none';
+      statusBox.textContent = '';
+      statusBox.className = 'status';
+    }
+
+    function formatBytes(bytes) {
+      const size = Number(bytes || 0);
+      if (!size) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      const index = Math.min(units.length - 1, Math.floor(Math.log(size) / Math.log(1024)));
+      const value = size / Math.pow(1024, index);
+      return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '-';
+      return new Date(ts).toLocaleString('zh-CN');
+    }
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `请求失败: ${response.status}`);
+      }
+      return data;
+    }
+
+    function renderPlaylistList() {
+      if (!playlists.length) {
+        playlistListEl.innerHTML = '<div class="empty" style="min-height:180px;">暂时还没有播放列表，先切分 demo.mp4 或上传一组视频吧。</div>';
+        return;
+      }
+
+      playlistListEl.innerHTML = playlists.map((playlist) => {
+        const activeClass = currentPlaylist && currentPlaylist.id === playlist.id ? 'active' : '';
+        return `
+          <div class="playlist-card ${activeClass}" data-id="${playlist.id}">
+            <strong>${playlist.name}</strong>
+            <div class="meta">
+              类型：${playlist.kind === 'split' ? 'demo 切分' : '批量上传'}<br>
+              条目数：${playlist.itemCount || (playlist.items || []).length}<br>
+              创建时间：${formatDate(playlist.createdAt)}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      playlistListEl.querySelectorAll('.playlist-card').forEach((el) => {
+        el.addEventListener('click', () => loadPlaylist(el.dataset.id));
+      });
+    }
+
+    function renderWecomPlaylistList() {
+      if (!wecomPlaylists.length) {
+        wecomPlaylistListEl.innerHTML = '<div class="empty" style="min-height:160px;">还没有企微播放列表。先选一个本地列表，再点“把当前列表上传到企微”。</div>';
+        return;
+      }
+
+      wecomPlaylistListEl.innerHTML = wecomPlaylists.map((playlist) => {
+        const activeClass = currentPlaylist && currentPlaylist.id === playlist.id ? 'active' : '';
+        return `
+          <div class="playlist-card ${activeClass}" data-wecom-id="${playlist.id}">
+            <strong>${playlist.name}</strong>
+            <div class="meta">
+              类型：企业微信 media_id 列表<br>
+              成功段数：${playlist.itemCount || 0}<br>
+              失败段数：${playlist.failedCount || 0}<br>
+              请求段数：${playlist.requestedCount || 0}<br>
+              创建时间：${formatDate(playlist.createdAt)}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      wecomPlaylistListEl.querySelectorAll('.playlist-card').forEach((el) => {
+        el.addEventListener('click', () => loadWecomPlaylist(el.dataset.wecomId));
+      });
+    }
+
+    function renderCurrentPlaylist() {
+      if (!currentPlaylist || !Array.isArray(currentPlaylist.items) || !currentPlaylist.items.length) {
+        emptyPlayer.style.display = 'flex';
+        playerBlock.style.display = 'none';
+        return;
+      }
+
+      emptyPlayer.style.display = 'none';
+      playerBlock.style.display = 'block';
+      updatePlaylistMetaText();
+      const playlistPayload = currentPlaylist.items.map((item) => ({
+        title: item.title,
+        url: normalizePlayableUrl(item.url),
+        size: item.size
+      }));
+
+      const m3u8Url = getCurrentPlaylistM3u8Url();
+      playlistJsonEl.value = JSON.stringify({
+        type: currentPlaylist.kind,
+        m3u8: m3u8Url || null,
+        items: playlistPayload
+      }, null, 2);
+
+      playlistItemsEl.innerHTML = currentPlaylist.items.map((item, index) => `
+        <div class="playlist-item ${index === currentIndex ? 'active' : ''}" data-index="${index}">
+          <strong>${index + 1}. ${item.title}</strong>
+          <div>大小：${formatBytes(item.size)}</div>
+          <div class="url">${normalizePlayableUrl(item.url)}</div>
+        </div>
+      `).join('');
+
+      playlistItemsEl.querySelectorAll('.playlist-item').forEach((el) => {
+        el.addEventListener('click', () => playIndex(Number(el.dataset.index), true));
+      });
+    }
+
+    function playIndex(index, autoplay = false) {
+      if (!currentPlaylist || !currentPlaylist.items[index]) return;
+      currentIndex = index;
+      playerMode = 'segment';
+      showNativeVideo();
+      const item = currentPlaylist.items[index];
+      videoPlayer.src = item.url;
+      renderCurrentPlaylist();
+      if (autoplay) {
+        videoPlayer.play().catch(() => {});
+      }
+    }
+
+    function playCurrentPlaylistAsM3u8(autoplay = false) {
+      const m3u8Url = getCurrentPlaylistM3u8Url();
+      if (!m3u8Url) return false;
+      playerMode = 'm3u8';
+      currentIndex = 0;
+      createXgHlsPlayer(m3u8Url);
+      if (xgPlayerInstance && typeof xgPlayerInstance.on === 'function') {
+        xgPlayerInstance.on('error', () => {
+          if (!currentPlaylist || currentPlaylist.kind !== 'wecom' || playerMode !== 'm3u8') return;
+          showStatus('xgplayer 播放 m3u8 失败，已自动退回顺序片段播放。', 'error');
+          playIndex(0, false);
+        });
+      }
+      renderCurrentPlaylist();
+      if (autoplay) {
+        if (xgPlayerInstance && typeof xgPlayerInstance.play === 'function') {
+          xgPlayerInstance.play();
+        }
+      }
+      return true;
+    }
+
+    async function loadPlaylist(playlistId) {
+      try {
+        const playlist = await requestJson(`/api/local-playlists/${encodeURIComponent(playlistId)}`);
+        currentPlaylist = playlist;
+        currentIndex = 0;
+        renderPlaylistList();
+        renderCurrentPlaylist();
+        playIndex(0, false);
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    }
+
+    async function loadWecomPlaylist(playlistId) {
+      try {
+        const playlist = await requestJson(`/api/wecom-playlists/${encodeURIComponent(playlistId)}`);
+        currentPlaylist = {
+          ...playlist,
+          items: (playlist.items || []).map((item) => ({
+            ...item,
+            url: item.directUrl || item.playbackUrl || item.playbackPath || ''
+          }))
+        };
+        currentIndex = 0;
+        renderPlaylistList();
+        renderWecomPlaylistList();
+        renderCurrentPlaylist();
+        try {
+          playCurrentPlaylistAsM3u8(false);
+        } catch (error) {
+          showStatus(`xgplayer 初始化失败，先切回顺序片段播放：${error.message}`, 'error');
+          playIndex(0, false);
+        }
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    }
+
+    async function refreshPlaylists(preferredId) {
+      try {
+        const data = await requestJson('/api/local-playlists');
+        playlists = Array.isArray(data) ? data : [];
+        renderPlaylistList();
+
+        if (preferredId) {
+          await loadPlaylist(preferredId);
+          return;
+        }
+
+        if (currentPlaylist) {
+          const exists = playlists.find((item) => item.id === currentPlaylist.id);
+          if (exists) {
+            await loadPlaylist(currentPlaylist.id);
+            return;
+          }
+        }
+
+        if (playlists.length) {
+          await loadPlaylist(playlists[0].id);
+        } else {
+          currentPlaylist = null;
+          renderCurrentPlaylist();
+        }
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    }
+
+    async function refreshWecomPlaylists(preferredId) {
+      try {
+        const data = await requestJson('/api/wecom-playlists');
+        wecomPlaylists = Array.isArray(data) ? data : [];
+        renderWecomPlaylistList();
+        if (preferredId) {
+          await loadWecomPlaylist(preferredId);
+        }
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    }
+
+    splitDemoBtn.addEventListener('click', async () => {
+      const segmentSeconds = Number(document.getElementById('segmentSeconds').value || 30);
+      splitDemoBtn.disabled = true;
+      clearStatus();
+
+      try {
+        const playlist = await requestJson('/api/local-playlists/split-demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ segmentSeconds })
+        });
+        showStatus(`demo.mp4 已切分完成，共生成 ${playlist.items.length} 段。`, 'success');
+        await refreshPlaylists(playlist.id);
+      } catch (error) {
+        showStatus(error.message, 'error');
+      } finally {
+        splitDemoBtn.disabled = false;
+      }
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      clearStatus();
+      refreshPlaylists();
+    });
+
+    uploadWecomBtn.addEventListener('click', async () => {
+      clearStatus();
+      if (!currentPlaylist || currentPlaylist.kind === 'wecom') {
+        showStatus('请先在左侧选中一个本地播放列表，再上传到企业微信。', 'error');
+        return;
+      }
+
+      if (currentPlaylist.kind === 'uploaded' && currentPlaylist.items.length === 1) {
+        showStatus('你当前选中的像是“单个原视频文件”列表，不是切分列表。企微很容易直接 413。建议先选 demo 切分列表，或者先把大视频切成多段再上传。', 'error');
+        return;
+      }
+
+      uploadWecomBtn.disabled = true;
+      try {
+        const limit = Number(document.getElementById('wecomLimit').value || currentPlaylist.items.length);
+        const playlistName = document.getElementById('wecomPlaylistName').value.trim();
+        const playlist = await requestJson(`/api/wecom-playlists/from-local/${encodeURIComponent(currentPlaylist.id)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limit, playlistName })
+        });
+        const failureText = playlist.failedCount ? `，失败 ${playlist.failedCount} 段` : '';
+        showStatus(`企业微信播放列表已生成，成功 ${playlist.itemCount} 段${failureText}。`, playlist.failedCount ? 'error' : 'success');
+        await refreshWecomPlaylists(playlist.id);
+      } catch (error) {
+        showStatus(error.message, 'error');
+      } finally {
+        uploadWecomBtn.disabled = false;
+      }
+    });
+
+    loadWecomBtn.addEventListener('click', async () => {
+      clearStatus();
+      await refreshWecomPlaylists();
+    });
+
+    uploadForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearStatus();
+
+      const files = document.getElementById('videoFiles').files;
+      if (!files.length) {
+        showStatus('请先选择至少一个视频文件。', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('playlistName', document.getElementById('playlistName').value.trim());
+      Array.from(files).forEach((file) => formData.append('files', file));
+
+      const submitBtn = uploadForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      try {
+        const playlist = await requestJson('/api/local-playlists/upload', {
+          method: 'POST',
+          body: formData
+        });
+        showStatus(`上传完成，已生成播放列表《${playlist.name}》。`, 'success');
+        uploadForm.reset();
+        await refreshPlaylists(playlist.id);
+      } catch (error) {
+        showStatus(error.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (!currentPlaylist) return;
+      const prevIndex = Math.max(0, currentIndex - 1);
+      playIndex(prevIndex, true);
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (!currentPlaylist) return;
+      const nextIndex = Math.min(currentPlaylist.items.length - 1, currentIndex + 1);
+      playIndex(nextIndex, true);
+    });
+
+    document.getElementById('copyJsonBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(playlistJsonEl.value || '');
+        showStatus('播放列表 JSON 已复制到剪贴板。', 'success');
+      } catch (error) {
+        showStatus('复制失败，请手动选中后复制。', 'error');
+      }
+    });
+
+    document.getElementById('copyJsonBtn').insertAdjacentHTML('afterend', '<button id="copyM3u8Btn" class="secondary" type="button">复制 m3u8 链接</button>');
+    document.getElementById('copyM3u8Btn').insertAdjacentHTML('afterend', '<button id="playM3u8Btn" class="secondary" type="button">m3u8 直放</button>');
+    document.getElementById('copyM3u8Btn').addEventListener('click', async () => {
+      const m3u8Url = getCurrentPlaylistM3u8Url();
+      if (!m3u8Url) {
+        showStatus('当前播放列表不是企业微信列表，暂时没有 m3u8 链接。', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(m3u8Url);
+        showStatus('m3u8 链接已复制到剪贴板。', 'success');
+      } catch (error) {
+        showStatus('复制失败，请手动复制文本框里的 m3u8 地址。', 'error');
+      }
+    });
+    document.getElementById('playM3u8Btn').addEventListener('click', async () => {
+      if (!currentPlaylist || currentPlaylist.kind !== 'wecom') {
+        showStatus('请先选中一个企业微信播放列表。', 'error');
+        return;
+      }
+      try {
+        const ok = playCurrentPlaylistAsM3u8(true);
+        if (!ok) {
+          showStatus('当前列表没有可用的 m3u8 地址。', 'error');
+        }
+      } catch (error) {
+        showStatus(error.message || 'm3u8 播放初始化失败', 'error');
+      }
+    });
+
+    videoPlayer.addEventListener('ended', () => {
+      if (playerMode === 'm3u8') return;
+      if (!currentPlaylist || !autoplayNextEl.checked) return;
+      if (currentIndex >= currentPlaylist.items.length - 1) return;
+      playIndex(currentIndex + 1, true);
+    });
+
+    videoPlayer.addEventListener('error', () => {
+      if (!currentPlaylist || currentPlaylist.kind !== 'wecom' || playerMode !== 'm3u8') return;
+      showStatus('当前浏览器对这个 m3u8 清单兼容性一般，已自动退回顺序片段播放。', 'error');
+      playIndex(0, false);
+    });
+
+    refreshPlaylists();
+    refreshWecomPlaylists();
+  </script>
+</body>
+</html>
